@@ -162,8 +162,25 @@ Open **http://&lt;pi-address&gt;:8080**.
 - **Record** logs raw telemetry to `web/logs/`.
 - Stopping `pedald` (Ctrl-C / SIGTERM) disarms the pedal.
 
+### Start on boot (systemd)
+
+```bash
+sudo cp web/pedald.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now pedald
+```
+
+| Task | Command |
+|---|---|
+| Status | `systemctl status pedald` |
+| Follow the log | `journalctl -u pedald -f` |
+| Restart after a code change | `sudo systemctl restart pedald` |
+
+The unit assumes user `pi` and the repo at `~/projects/race-sim-active-pedal`.
+Edit it if yours differ.
+
 Only one program may own the serial port. Stop `pedald` before using the
-`tools/` scripts.
+`tools/` scripts (`sudo systemctl stop pedald`), and start it again afterwards.
 
 ### Command-line alternative
 
@@ -225,7 +242,7 @@ corrections in the GUI's *Encoder health* panel.
 ## Roadmap
 
 - [ ] Game link: Pi Zero W as a USB HID game controller (brake + throttle)
-- [ ] `pedald` as a systemd service
+- [x] `pedald` as a systemd service
 - [ ] Pi Zero W deployment: Uno on the GPIO UART, reset pin for flashing
 - [ ] Tactile transducer / vibration motor for ABS kicks
 - [ ] Game telemetry driven effects (ABS, lock-up, fade from the sim)
