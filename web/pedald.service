@@ -1,5 +1,8 @@
 # systemd unit for the active pedal daemon.
-# Install (paths assume user pi and the repo at ~/projects/race-sim-active-pedal):
+# Paths assume user simpedal, the repo at ~/projects/race-sim-active-pedal and a
+# venv at <repo>/venv (uv venv --python 3.12 venv && uv pip install --python venv/bin/python pyserial).
+# Other user/path: edit User, WorkingDirectory and ExecStart.
+# Install:
 #   sudo cp web/pedald.service /etc/systemd/system/ && sudo systemctl daemon-reload
 #   sudo systemctl enable --now pedald
 # Stop it before using tools/ (they need the serial port):  sudo systemctl stop pedald
@@ -8,9 +11,9 @@ Description=Active pedal daemon (serial owner + web GUI on :8080)
 After=network.target
 
 [Service]
-User=pi
-WorkingDirectory=/home/pi/projects/race-sim-active-pedal/web
-ExecStart=/usr/bin/python3 -u pedald.py
+User=simpedal
+WorkingDirectory=/home/simpedal/projects/race-sim-active-pedal/web
+ExecStart=/home/simpedal/projects/race-sim-active-pedal/venv/bin/python -u pedald.py
 # SIGTERM -> pedald disarms the pedal before exiting
 KillSignal=SIGTERM
 TimeoutStopSec=5

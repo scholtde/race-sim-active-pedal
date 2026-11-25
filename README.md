@@ -87,7 +87,7 @@ ABS is triggered by **force**: it starts at `a` kg and reaches full strength at
 | 2 limit switches | NC to GND, pull-ups; define home and end of travel |
 | Throttle | potentiometer on a pedal, A2 |
 | Supply | 12 V works. The rig is tuned at **21–21.6 V** (24 V PSU trimmed down). Fit 4,700–10,000 µF / 35 V at the shield; a 26–28 V TVS is cheap insurance. Bench PSUs cannot absorb regen. |
-| Raspberry Pi | 3B+ now; a Pi Zero W (USB gadget → game controller) is the target |
+| Host | UP board UP-CHT01 (Atom x5-Z8350): runs pedald and is the USB game controller via its OTG port (`gadget/`). A Pi 3B+ works for pedald but cannot be a USB device. |
 
 ### Uno pins
 
@@ -176,8 +176,13 @@ sudo systemctl enable --now pedald
 | Follow the log | `journalctl -u pedald -f` |
 | Restart after a code change | `sudo systemctl restart pedald` |
 
-The unit assumes user `pi` and the repo at `~/projects/race-sim-active-pedal`.
-Edit it if yours differ.
+The unit assumes user `simpedal`, the repo at `~/projects/race-sim-active-pedal`
+and a Python venv at `<repo>/venv`. Edit it if yours differ. On an OS with an
+old Python (the UP board runs Ubuntu 16.04 / Python 3.5; pedald needs 3.7+):
+
+```bash
+uv venv --python 3.12 venv && uv pip install --python venv/bin/python pyserial
+```
 
 Only one program may own the serial port. Stop `pedald` before using the
 `tools/` scripts (`sudo systemctl stop pedald`), and start it again afterwards.
