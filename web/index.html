@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Active Pedal</title>
+<style>
+:root{
+  --bg:#0f1216; --panel:#171b21; --panel2:#1d222a; --line:#2a313b; --text:#e6e9ee; --dim:#8b95a3;
+  --brake:#ff5a4f; --pos:#4fb3ff; --thr:#5ad17a; --abs:#ffb347; --heat:#ff7a2f; --warn:#ffcc4d; --bad:#ff4d6d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+h1{font-size:16px;margin:0 8px 0 0;font-weight:650;letter-spacing:.3px}
+.pill{padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--panel2);border:1px solid var(--line)}
+.pill.ok{color:var(--thr);border-color:#2f6b40}.pill.bad{color:var(--bad);border-color:#7a2a3a}.pill.armed{color:#111;background:var(--brake);border-color:var(--brake)}.pill.abs{color:#111;background:var(--abs);border-color:var(--abs)}
+button,select,input[type=text]{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 11px}
+button{cursor:pointer}button:hover{border-color:#4a5563}
+button.primary{background:#2a6b3e;border-color:#2f8048}button.danger{background:#7a2230;border-color:#a02c3f}
+button.on{background:#7a5a12;border-color:#b08218}
+.spacer{flex:1}
+main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;padding:14px 16px;max-width:1500px;margin:0 auto}
+@media (max-width:980px){main{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px 14px;min-width:0}
+.card h2{font-size:12px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin:0 0 10px;font-weight:650}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-bottom:12px}
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+.tile .k{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+.tile .v{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:12px;color:var(--dim);font-weight:500;margin-left:3px}
+.bar{height:5px;border-radius:3px;background:#262c35;margin-top:5px;overflow:hidden}.bar i{display:block;height:100%;width:0}
+canvas{width:100%;display:block;background:var(--panel2);border:1px solid var(--line);border-radius:9px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--dim);margin:6px 2px 0;flex-wrap:wrap}
+.legend b{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.group{margin-bottom:14px}.group h3{font-size:13px;margin:0 0 6px;color:var(--text);font-weight:650}
+.knob{display:grid;grid-template-columns:minmax(120px,1.1fr) minmax(80px,1.6fr) 84px;gap:10px;align-items:center;padding:4px 0}
+.knob label{color:var(--dim);font-size:13px}.knob label .u{opacity:.7;font-size:11px;margin-left:3px}
+.knob input[type=range]{width:100%;accent-color:var(--pos)}
+.knob input[type=number]{width:84px;font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 6px;text-align:right}
+.knob.changed label{color:var(--warn)}
+.toggle{justify-self:start}
+#log{height:180px;overflow:auto;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 8px;white-space:pre-wrap;word-break:break-word}
+#log .tx{color:var(--pos)}#log .warn{color:var(--warn)}
+.row{display:flex;gap:8px;margin-top:8px}.row input{flex:1;min-width:0}
+.note{font-size:12px;color:var(--dim);margin:4px 0 0}
+.enc .v{font-size:18px}.enc.bad .v{color:var(--bad)}.enc.warn .v{color:var(--warn)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Active Pedal</h1>
+  <span id="conn" class="pill bad">offline</span>
+  <span id="mode" class="pill">—</span>
+  <button class="primary" onclick="armClick()">Arm</button>
+  <button class="danger" onclick="api('disarm')">Disarm</button>
+  <button onclick="if(confirm('Recalibrate? The pedal will move to both ends. Keep your foot off.'))api('calibrate')">Calibrate</button>
+  <button onclick="api('tare')" title="Zero the load cell (foot off)">Tare</button>
+  <span class="spacer"></span>
+  <select id="profiles" title="Profiles"></select>
+  <button onclick="loadProfile()">Load</button>
+  <button onclick="saveProfile(false)">Save</button>
+  <button onclick="saveProfile(true)">Save as…</button>
+  <button onclick="delProfile()">Delete</button>
+  <button id="rec" onclick="toggleRec()">● Record</button>
+</header>
+
+<main>
+  <section>
+    <div class="card">
+      <h2>Live</h2>
+      <div class="tiles">
+        <div class="tile"><div class="k">Brake</div><div class="v" id="t_kg">–<small>kg</small></div><div class="bar"><i id="b_kg" style="background:var(--brake)"></i></div></div>
+        <div class="tile"><div class="k">Position</div><div class="v" id="t_mm">–<small>mm</small></div><div class="bar"><i id="b_mm" style="background:var(--pos)"></i></div></div>
+        <div class="tile"><div class="k">Throttle</div><div class="v" id="t_thr">–<small>%</small></div><div class="bar"><i id="b_thr" style="background:var(--thr)"></i></div></div>
+        <div class="tile"><div class="k">Motor</div><div class="v" id="t_a">–<small>A</small></div><div class="bar"><i id="b_a" style="background:var(--abs)"></i></div></div>
+        <div class="tile"><div class="k">Peak brake</div><div class="v" id="t_peak">–<small>kg</small></div></div>
+        <div class="tile" id="heatTile" style="display:none"><div class="k">Brake heat</div><div class="v" id="t_heat">–<small>% fade</small></div><div class="bar"><i id="b_heat" style="background:var(--heat)"></i></div></div>
+      </div>
+      <canvas id="chart" height="260"></canvas>
+      <div class="legend">
+        <span><b style="background:var(--brake)"></b>brake kg (0–25)</span>
+        <span><b style="background:var(--pos)"></b>position mm (0–50)</span>
+        <span><b style="background:var(--thr)"></b>throttle %</span>
+        <span><b style="background:var(--abs);opacity:.5;height:8px"></b>ABS active</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Pedal curve — force vs travel</h2>
+      <canvas id="curve" height="250"></canvas>
+      <div class="legend">
+        <span><b style="background:var(--pos)"></b>profile curve</span>
+        <span><b style="background:var(--heat)"></b>with effects now</span>
+        <span><b style="background:var(--abs)"></b>ABS start / full</span>
+        <span><b style="background:var(--brake);height:8px;width:8px;border-radius:50%"></b>your foot</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Encoder health <button style="float:right;padding:2px 8px;font-size:11px" onclick="api('stats/reset')">reset</button></h2>
+      <div class="tiles" style="margin:0">
+        <div class="tile enc" id="e1"><div class="k">Big corrections</div><div class="v" id="t_zbig">–</div></div>
+        <div class="tile enc" id="e2"><div class="k">Largest (limit 256)</div><div class="v" id="t_zmax">–</div></div>
+        <div class="tile enc" id="e3"><div class="k">Bad index checks</div><div class="v" id="t_idx">–</div></div>
+        <div class="tile enc"><div class="k">Uno resets</div><div class="v" id="t_resets">–</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Console</h2>
+      <div id="log"></div>
+      <div class="row"><input type="text" id="cmd" placeholder="raw command, e.g. ?  (Enter to send)"><button onclick="sendCmd()">Send</button><button onclick="api('push')" title="Send every setting again">Push all</button></div>
+    </div>
+  </section>
+
+  <section class="card" id="knobs"><h2>Settings <span id="dirty" style="color:var(--warn);text-transform:none;letter-spacing:0"></span></h2></section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let CFG = null, P = {}, saved = {}, LIVE = {}, hist = [], lastAbsT = 0;
+const HIST_S = 10;
+
+async function api(path, body) {
+  const r = await fetch('/api/' + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})});
+  const j = await r.json(); if (j.error) alert(j.error); return j;
+}
+function armClick(){ if (!LIVE.mode || LIVE.mode==='disarmed' && !confirm('Arm the pedal? If it is not calibrated it will calibrate first (the pedal moves).')) return; api('arm'); }
+
+async function init() {
+  CFG = await (await fetch('/api/config')).json();
+  P = CFG.profile; saved = {...P};
+  fillProfiles(CFG.profiles, CFG.profile_name);
+  buildKnobs();
+  drawCurve();
+  stream();
+}
+function fillProfiles(list, cur){ const s=$('profiles'); s.innerHTML=''; for (const n of list){ const o=document.createElement('option'); o.textContent=n; if(n===cur)o.selected=true; s.appendChild(o);} }
+
+// ---------------- knobs
+const sendTimers = {};
+function buildKnobs(){
+  const host = $('knobs'); host.querySelectorAll('.group').forEach(e=>e.remove());
+  const groups = {};
+  for (const k of CFG.knobs) (groups[k.group] ||= []).push(k);
+  const notes = {
+    'Supply':'Set to the real supply voltage. Motor maths stays in 12 V units.',
+    'Curve':'Knee 0 = off. Bite 0 = off (then gamma shapes the curve).',
+    'Effects':'Pi-side: they move the full-travel force and bite live.',
+  };
+  for (const [g, ks] of Object.entries(groups)) {
+    const div = document.createElement('div'); div.className='group';
+    div.innerHTML = `<h3>${g}</h3>` + (notes[g]?`<p class="note">${notes[g]}</p>`:'');
+    for (const k of ks) {
+      const row = document.createElement('div'); row.className='knob'; row.id='k_'+k.key;
+      const isBool = k.min===0 && k.max===1 && k.step===1;
+      const lab = `<label>${k.label}${k.unit?`<span class="u">${k.unit}</span>`:''}</label>`;
+      if (isBool) {
+        row.innerHTML = lab + `<button class="toggle"></button><span></span>`;
+        const b = row.querySelector('button');
+        const paint = () => { b.textContent = P[k.key] ? 'ON' : 'off'; b.classList.toggle('on', !!P[k.key]); };
+        b.onclick = () => { P[k.key] = P[k.key] ? 0 : 1; paint(); push(k.key); };
+        row.paint = paint; paint();
+      } else {
+        row.innerHTML = lab + `<input type="range" min="${k.min}" max="${k.max}" step="${k.step}"><input type="number" min="${k.min}" max="${k.max}" step="${k.step}">`;
+        const [r, n] = row.querySelectorAll('input');
+        const paint = () => { r.value = P[k.key]; n.value = +(+P[k.key]).toFixed(3); };
+        r.oninput = () => { P[k.key] = +r.value; n.value = r.value; queue(k.key); };
+        n.onchange = () => { P[k.key] = Math.min(k.max, Math.max(k.min, +n.value)); r.value = P[k.key]; push(k.key); };
+        row.paint = paint; paint();
+      }
+      div.appendChild(row);
+    }
+    host.appendChild(div);
+  }
+  markDirty();
+}
+function queue(key){ clearTimeout(sendTimers[key]); sendTimers[key] = setTimeout(()=>push(key), 120); drawCurve(); markDirty(); }
+async function push(key){ const j = await api('knob', {key, value:P[key]}); if (j.value!==undefined && j.value!==P[key]) { P[key]=j.value; $('k_'+key).paint(); } drawCurve(); markDirty(); }
+function markDirty(){
+  let n=0; for (const k of CFG.knobs){ const ch = +P[k.key] !== +saved[k.key]; $('k_'+k.key)?.classList.toggle('changed', ch); n+=ch; }
+  $('dirty').textContent = n ? `· ${n} unsaved` : '';
+}
+
+// ---------------- profiles
+async function loadProfile(){ const name=$('profiles').value; const j=await api('profile/load',{name}); if(j.profile){P=j.profile; saved={...P}; buildKnobs(); drawCurve();} }
+async function saveProfile(asNew){
+  let name = $('profiles').value;
+  if (asNew) { name = prompt('Profile name', name); if (!name) return; }
+  const j = await api('profile/save',{name}); if (j.profiles){ fillProfiles(j.profiles, name); saved={...P}; markDirty(); }
+}
+async function delProfile(){ const name=$('profiles').value; if(!confirm(`Delete profile "${name}"?`))return; const j=await api('profile/delete',{name}); if(j.profiles) fillProfiles(j.profiles, CFG.profile_name); }
+let recOn=false; function toggleRec(){ api('record',{on:!recOn}); }
+
+// ---------------- console
+$('cmd').addEventListener('keydown', e => { if (e.key==='Enter') sendCmd(); });
+function sendCmd(){ const c=$('cmd').value.trim(); if(!c)return; api('cmd',{cmd:c}); $('cmd').value=''; }
+function addLog(lines){
+  const el=$('log'); const atBottom = el.scrollTop+el.clientHeight >= el.scrollHeight-20;
+  for (const [, t, txt] of lines) {
+    const d=document.createElement('div'); const ts=new Date(t*1000).toLocaleTimeString();
+    d.textContent = ts+'  '+txt;
+    if (txt.startsWith('> ')) d.className='tx';
+    else if (/STOP|lost|limit|abort|fail|reset|disconnected|oc/i.test(txt)) d.className='warn';
+    el.appendChild(d);
+  }
+  while (el.childNodes.length>500) el.removeChild(el.firstChild);
+  if (atBottom) el.scrollTop = el.scrollHeight;
+}
+
+// ---------------- stream
+function stream(){
+  const es = new EventSource('/api/stream');
+  es.onmessage = ev => {
+    const s = JSON.parse(ev.data);
+    if (s.log.length) addLog(s.log);
+    const c=$('conn'); c.textContent = s.connected?'Uno connected':'Uno offline'; c.className='pill '+(s.connected?'ok':'bad');
+    recOn = s.recording; $('rec').classList.toggle('on', recOn); $('rec').textContent = recOn?'■ Recording':'● Record';
+    const st=s.stats;
+    $('t_peak').innerHTML = st.peak_kg.toFixed(1)+'<small>kg</small>';
+    $('t_zbig').textContent = st.zbig; $('t_zmax').textContent = st.zmax; $('t_resets').textContent = st.resets;
+    $('e1').className='tile enc'+(st.zbig>50?' warn':''); $('e2').className='tile enc'+(st.zmax>200?' bad':st.zmax>120?' warn':'');
+    const L = s.live; if (!L || L.kg===undefined) return;
+    if (L.t !== LIVE.t) { hist.push(L); }
+    LIVE = L;
+    const now = L.t; while (hist.length && hist[0].t < now-HIST_S) hist.shift();
+    const m=$('mode'); m.textContent=L.mode; m.className='pill'+(L.mode.startsWith('ABS')?' abs':L.mode!=='disarmed'&&!L.mode.startsWith('cal')?' armed':'');
+    setTile('kg', L.kg, 1, 25); setTile('mm', L.mm, 1, 50); setTile('thr', L.thr, 0, 100); setTile('a', L.mA/1000, 1, 15);
+    $('t_idx').textContent = L.idx_n ? `${L.idx_bad} / ${L.idx_n}` : '–';
+    $('e3').className='tile enc'+(L.idx_n && L.idx_bad/L.idx_n>0.4?' warn':'');
+    const hot = !!P['fx.hot']; $('heatTile').style.display = hot?'':'none';
+    if (hot) { $('t_heat').innerHTML=Math.round(L.fade*100)+'<small>% fade</small>'; $('b_heat').style.width = Math.min(100, L.heat/P['fx.heat_full']*100)+'%'; }
+    drawChart(); drawCurve();
+  };
+  es.onerror = () => { $('conn').textContent='pi offline'; $('conn').className='pill bad'; };
+}
+function setTile(id, v, dp, full){ $('t_'+id).firstChild.nodeValue = v.toFixed(dp); $('b_'+id).style.width = Math.max(0,Math.min(100, v/full*100))+'%'; }
+
+// ---------------- charts
+function fitCanvas(cv){ const r=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight; if(cv.width!==Math.round(w*r)||cv.height!==Math.round(h*r)){cv.width=Math.round(w*r);cv.height=Math.round(h*r);} const g=cv.getContext('2d'); g.setTransform(r,0,0,r,0,0); return [g,w,h]; }
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function grid(g, w, h, pad){ g.strokeStyle=css('--line'); g.lineWidth=1; g.beginPath(); for(let i=0;i<=5;i++){const y=pad.t+(h-pad.t-pad.b)*i/5; g.moveTo(pad.l,y); g.lineTo(w-pad.r,y);} g.stroke(); }
+
+function drawChart(){
+  const [g,w,h] = fitCanvas($('chart')); g.clearRect(0,0,w,h);
+  const pad={l:34,r:34,t:8,b:18}; grid(g,w,h,pad);
+  if (!hist.length) return;
+  const t1 = hist[hist.length-1].t, X = t => pad.l + (w-pad.l-pad.r)*(1-(t1-t)/HIST_S), Y = (v,max) => h-pad.b-(h-pad.t-pad.b)*Math.max(0,Math.min(1,v/max));
+  g.fillStyle = css('--abs')+'40';
+  for (let i=1;i<hist.length;i++) if (hist[i].mode.startsWith('ABS')) g.fillRect(X(hist[i-1].t), pad.t, X(hist[i].t)-X(hist[i-1].t)+0.5, h-pad.t-pad.b);
+  const line=(key,max,col,width)=>{ g.strokeStyle=col; g.lineWidth=width; g.beginPath(); hist.forEach((p,i)=>{const x=X(p.t),y=Y(p[key],max); i?g.lineTo(x,y):g.moveTo(x,y);}); g.stroke(); };
+  line('thr',100,css('--thr'),1.5); line('mm',50,css('--pos'),2); line('kg',25,css('--brake'),2.2);
+  g.fillStyle=css('--dim'); g.font='11px system-ui';
+  for(let i=0;i<=5;i++){const y=pad.t+(h-pad.t-pad.b)*i/5; g.textAlign='right'; g.fillText((25-5*i)+'', pad.l-5, y+4); g.textAlign='left'; g.fillText((50-10*i)+'', w-pad.r+5, y+4);}
+  g.textAlign='center'; g.fillText('−'+HIST_S+' s', pad.l+14, h-4); g.fillText('now', w-pad.r-12, h-4);
+}
+
+// firmware curvePos(), in mm (PARK 2 mm, top = travel limit)
+function curveMM(kg, o){
+  const park=2, top=o.L, d=o.d;
+  if (kg <= d) return park;
+  const bite=o.B_mm, bk=o.B_kg, full=o.p;
+  if (bite>0 && bite>park+0.5 && bite<top-2 && bk>d+0.2 && bk<full-0.5) {
+    const q=o.Q_mm, qk=o.Q_kg;
+    if (q>0 && q>park+0.5 && q<bite-0.5 && qk>d+0.05 && qk<bk-0.1) {
+      if (kg<qk) return park+(kg-d)/(qk-d)*(q-park);
+      if (kg<bk) return q+(kg-qk)/(bk-qk)*(bite-q);
+    }
+    if (kg<bk) return park+(kg-d)/(bk-d)*(bite-park);
+    return bite+Math.min(1,(kg-bk)/(full-bk))*(top-bite);
+  }
+  const u=Math.min(1,(kg-d)/(full-d)); return park+Math.pow(u,o.k)*(top-park);
+}
+function drawCurve(){
+  if (!CFG) return;
+  const [g,w,h] = fitCanvas($('curve')); g.clearRect(0,0,w,h);
+  const pad={l:34,r:12,t:8,b:22}; grid(g,w,h,pad);
+  const kmax = Math.max(10, Math.ceil(Math.max(P.p, P.f, LIVE.kg||0)*1.1/5)*5), mmax=50;
+  const X=kg=>pad.l+(w-pad.l-pad.r)*kg/kmax, Y=mm=>h-pad.b-(h-pad.t-pad.b)*mm/mmax;
+  const plot=(o,col,wd,dash)=>{ g.strokeStyle=col; g.lineWidth=wd; g.setLineDash(dash||[]); g.beginPath(); for(let i=0;i<=240;i++){const kg=kmax*i/240,x=X(kg),y=Y(curveMM(kg,o)); i?g.lineTo(x,y):g.moveTo(x,y);} g.stroke(); g.setLineDash([]); };
+  g.strokeStyle=css('--abs'); g.setLineDash([4,4]); g.lineWidth=1;
+  for (const v of [P.a,P.f]) { g.beginPath(); g.moveTo(X(v),pad.t); g.lineTo(X(v),h-pad.b); g.stroke(); }
+  g.setLineDash([]);
+  plot(P, css('--pos'), 2.2);
+  if ((P['fx.hot']||P['fx.abs_fade']) && LIVE.p_live!==undefined && (LIVE.p_live!==P.p || LIVE.b_live!==P.B_mm))
+    plot({...P, p:LIVE.p_live, B_mm:LIVE.b_live}, css('--heat'), 1.8, [6,4]);
+  if (LIVE.kg!==undefined) { g.fillStyle=css('--brake'); g.beginPath(); g.arc(X(Math.max(0,LIVE.kg)), Y(LIVE.mm), 5, 0, 7); g.fill(); }
+  g.fillStyle=css('--dim'); g.font='11px system-ui';
+  g.textAlign='right'; for(let i=0;i<=5;i++) g.fillText((mmax-10*i)+'', pad.l-5, pad.t+(h-pad.t-pad.b)*i/5+4);
+  g.textAlign='center'; for(let kg=0;kg<=kmax;kg+=5) g.fillText(kg+(kg===kmax?' kg':''), X(kg), h-6);
+}
+addEventListener('resize', ()=>{drawChart(); drawCurve();});
+init();
+</script>
+</body>
+</html>

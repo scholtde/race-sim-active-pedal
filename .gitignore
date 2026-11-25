@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# pedald runtime state and logs
+web/state.json
+web/logs/
+web/*.log
+
+# run logs written by the tools (monitor_raw.txt, fade_raw.txt, probe_raw.txt, ...)
+*.txt
+!requirements.txt
+
+# arduino-cli build output
+build/
