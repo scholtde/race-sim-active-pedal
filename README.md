@@ -16,7 +16,7 @@ Because the pedal is driven rather than sprung, its feel is software:
 Every one of these is a setting you can change while you drive.
 
 > Status: working prototype on the bench / floor board. Brake + throttle are
-> read and tuned; the link to the game PC (USB game controller) is next.
+> read and tuned, and reach the game PC as a USB game controller ("Active Pedal").
 
 ---
 
@@ -30,8 +30,8 @@ Every one of these is a setting you can change while you drive.
                                    │
                  USB serial (115200)
                                    │
-                         Raspberry Pi: pedald.py ── wifi ──► web GUI (any browser)
-                                                  └ (planned) USB HID ──► game PC
+                         UP board: pedald.py ── network ──► web GUI (any browser)
+                                              └ USB OTG (HID joystick) ──► game PC
 ```
 
 - **Arduino Uno (`firmware/pedal_sim`)** runs the real-time loop:
@@ -187,6 +187,27 @@ uv venv --python 3.12 venv && uv pip install --python venv/bin/python pyserial
 Only one program may own the serial port. Stop `pedald` before using the
 `tools/` scripts (`sudo systemctl stop pedald`), and start it again afterwards.
 
+### Game controller (USB HID)
+
+The host's OTG port shows up on the PC as **Active Pedal**: X = brake (from the
+load-cell force), Y = throttle, 0–4095 each, updated with every telemetry line
+(20 Hz). The *Game* settings set the force for 100% brake, a deadzone and a curve.
+It needs a board with a USB device controller (`ls /sys/class/udc`): UP-CHT01,
+Pi Zero / 4 / 5. A Pi 3B+ cannot do it.
+
+```bash
+sudo cp gadget/99-pedal-hidg.rules /etc/udev/rules.d/
+sudo cp gadget/pedal-gadget.service /etc/systemd/system/ && sudo systemctl daemon-reload
+sudo systemctl enable --now pedal-gadget && sudo systemctl restart pedald
+```
+
+On the UP board the firmware forces the OTG port to host mode, and its 4.15
+kernel has no driver to change that; `gadget/otg_role.py device` sets the
+switch directly (the service does it at every boot). Test without pedald:
+`gadget/sweep.py`, then watch `joy.cpl` on Windows. If Windows shows the device
+but not the controller after a descriptor change, bump `bcdDevice` in
+`hid_gadget.sh` (Windows caches descriptors).
+
 ### Command-line alternative
 
 ```bash
@@ -246,9 +267,10 @@ corrections in the GUI's *Encoder health* panel.
 
 ## Roadmap
 
-- [ ] Game link: Pi Zero W as a USB HID game controller (brake + throttle)
+- [x] Game link: USB HID game controller (brake + throttle) from the UP board
+- [ ] Faster telemetry for the game axes (20 Hz now; the load cell runs at ~86 Hz)
 - [x] `pedald` as a systemd service
-- [ ] Pi Zero W deployment: Uno on the GPIO UART, reset pin for flashing
+- [x] One host board (UP-CHT01) for pedald, GUI and game link; the 3B+ is retired
 - [ ] Tactile transducer / vibration motor for ABS kicks
 - [ ] Game telemetry driven effects (ABS, lock-up, fade from the sim)
 - [ ] Shielded encoder cable; bigger MCU when the Uno runs out
