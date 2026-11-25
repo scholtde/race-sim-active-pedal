@@ -22,7 +22,7 @@ down
 mkdir -p $G && cd $G
 echo 0x1d6b > idVendor          # Linux Foundation
 echo 0x0104 > idProduct         # multifunction composite gadget
-echo 0x0100 > bcdDevice
+echo 0x0101 > bcdDevice        # bump when the descriptor changes (Windows caches it)
 echo 0x0200 > bcdUSB
 mkdir -p strings/0x409
 echo "0001"                > strings/0x409/serialnumber
@@ -33,10 +33,8 @@ mkdir -p functions/hid.usb0
 echo 0 > functions/hid.usb0/protocol
 echo 0 > functions/hid.usb0/subclass
 echo 5 > functions/hid.usb0/report_length
-printf '\x05\x01\x09\x04\xa1\x01'\
-'\x05\x09\x19\x01\x29\x08\x15\x00\x25\x01\x75\x01\x95\x08\x81\x02'\
-'\x05\x01\x09\x01\xa1\x00\x09\x30\x09\x31\x15\x00\x26\xff\x0f\x75\x10\x95\x02\x81\x02\xc0'\
-'\xc0' > functions/hid.usb0/report_desc
+# octal escapes: dash's printf (Ubuntu /bin/sh) does not understand \x
+printf '\005\001\011\004\241\001\005\011\031\001\051\010\025\000\045\001\165\001\225\010\201\002\005\001\011\001\241\000\011\060\011\061\025\000\046\377\017\165\020\225\002\201\002\300\300' > functions/hid.usb0/report_desc
 
 mkdir -p configs/c.1/strings/0x409
 echo "pedal" > configs/c.1/strings/0x409/configuration
