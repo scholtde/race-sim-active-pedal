@@ -10,41 +10,74 @@
   --brake:#ff5a4f; --pos:#4fb3ff; --thr:#5ad17a; --abs:#ffb347; --heat:#ff7a2f; --warn:#ffcc4d; --bad:#ff4d6d;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-h1{font-size:16px;margin:0 8px 0 0;font-weight:650;letter-spacing:.3px}
-.pill{padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--panel2);border:1px solid var(--line)}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{display:flex;flex-direction:column;overflow:hidden}
+
+/* ---- header */
+header{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+h1{font-size:16px;margin:0 6px 0 0;font-weight:650;letter-spacing:.3px}
+.pill{padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--panel2);border:1px solid var(--line);white-space:nowrap}
 .pill.ok{color:var(--thr);border-color:#2f6b40}.pill.bad{color:var(--bad);border-color:#7a2a3a}.pill.armed{color:#111;background:var(--brake);border-color:var(--brake)}.pill.abs{color:#111;background:var(--abs);border-color:var(--abs)}
-button,select,input[type=text]{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 11px}
+.readout{font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim);white-space:nowrap}
+.readout b{color:var(--text);font-weight:650}
+button,select,input[type=text]{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 10px}
+header button,header select{padding:4px 9px;font-size:13px}
 button{cursor:pointer}button:hover{border-color:#4a5563}
 button.primary{background:#2a6b3e;border-color:#2f8048}button.danger{background:#7a2230;border-color:#a02c3f}
 button.on{background:#7a5a12;border-color:#b08218}
 .spacer{flex:1}
-main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;padding:14px 16px;max-width:1500px;margin:0 auto}
-@media (max-width:980px){main{grid-template-columns:minmax(0,1fr)}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px 14px;min-width:0}
-.card h2{font-size:12px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin:0 0 10px;font-weight:650}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-bottom:12px}
-.tile{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+
+/* ---- app: tabs (left) + settings (right), exactly one screen */
+.app{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:12px;padding:12px 14px}
+.main{display:flex;flex-direction:column;min-height:0;min-width:0}
+nav.tabs{display:flex;gap:4px;flex:none;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+nav.tabs button{flex:none;white-space:nowrap}
+nav.tabs button{border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;background:none;color:var(--dim);padding:7px 14px;font-weight:600}
+nav.tabs button.active{background:var(--panel);color:var(--text);border-color:var(--line);margin-bottom:-1px}
+nav.tabs .narrow{display:none}
+.panes{flex:1;min-height:0;background:var(--panel);border:1px solid var(--line);border-top:none;border-radius:0 0 11px 11px;padding:12px}
+.pane{display:none;height:100%;flex-direction:column;gap:10px;min-height:0}
+.pane.active{display:flex}
+.cw{flex:1;min-height:120px;position:relative}
+canvas{position:absolute;inset:0;width:100%;height:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px}
+
+aside{min-height:0;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:0 14px 12px}
+aside .head{position:sticky;top:0;background:var(--panel);padding:12px 0 8px;z-index:1;display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--line);margin-bottom:8px}
+aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin:0;font-weight:650}
+
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  aside{display:none}
+  nav.tabs .narrow{display:block}
+  body.tab-settings aside{display:block}
+  body.tab-settings .panes{display:none}
+}
+
+/* ---- tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;flex:none}
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 10px}
 .tile .k{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
-.tile .v{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums}
+.tile .v{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
 .tile .v small{font-size:12px;color:var(--dim);font-weight:500;margin-left:3px}
-.bar{height:5px;border-radius:3px;background:#262c35;margin-top:5px;overflow:hidden}.bar i{display:block;height:100%;width:0}
-canvas{width:100%;display:block;background:var(--panel2);border:1px solid var(--line);border-radius:9px}
-.legend{display:flex;gap:14px;font-size:12px;color:var(--dim);margin:6px 2px 0;flex-wrap:wrap}
+.bar{height:5px;border-radius:3px;background:#262c35;margin-top:4px;overflow:hidden}.bar i{display:block;height:100%;width:0}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--dim);flex-wrap:wrap;flex:none}
 .legend b{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
-.group{margin-bottom:14px}.group h3{font-size:13px;margin:0 0 6px;color:var(--text);font-weight:650}
-.knob{display:grid;grid-template-columns:minmax(120px,1.1fr) minmax(80px,1.6fr) 84px;gap:10px;align-items:center;padding:4px 0}
+.enc .v{font-size:20px}.enc.bad .v{color:var(--bad)}.enc.warn .v{color:var(--warn)}
+.note{font-size:12px;color:var(--dim);margin:2px 0 0}
+
+/* ---- knobs */
+.group{margin-bottom:14px}.group h3{font-size:13px;margin:0 0 4px;font-weight:650}
+.knob{display:grid;grid-template-columns:minmax(110px,1.1fr) minmax(70px,1.3fr) 76px;gap:8px;align-items:center;padding:3px 0}
 .knob label{color:var(--dim);font-size:13px}.knob label .u{opacity:.7;font-size:11px;margin-left:3px}
 .knob input[type=range]{width:100%;accent-color:var(--pos)}
-.knob input[type=number]{width:84px;font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 6px;text-align:right}
+.knob input[type=number]{width:76px;font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 6px;text-align:right}
 .knob.changed label{color:var(--warn)}
 .toggle{justify-self:start}
-#log{height:180px;overflow:auto;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 8px;white-space:pre-wrap;word-break:break-word}
+
+/* ---- console */
+#log{flex:1;min-height:0;overflow:auto;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 8px;white-space:pre-wrap;word-break:break-word}
 #log .tx{color:var(--pos)}#log .warn{color:var(--warn)}
-.row{display:flex;gap:8px;margin-top:8px}.row input{flex:1;min-width:0}
-.note{font-size:12px;color:var(--dim);margin:4px 0 0}
-.enc .v{font-size:18px}.enc.bad .v{color:var(--bad)}.enc.warn .v{color:var(--warn)}
+.row{display:flex;gap:8px;flex:none}.row input{flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -52,6 +85,7 @@ canvas{width:100%;display:block;background:var(--panel2);border:1px solid var(--
   <h1>Active Pedal</h1>
   <span id="conn" class="pill bad">offline</span>
   <span id="mode" class="pill">—</span>
+  <span class="readout">BRK <b id="r_kg">–</b> kg · <b id="r_mm">–</b> mm · THR <b id="r_thr">–</b> %</span>
   <button class="primary" onclick="armClick()">Arm</button>
   <button class="danger" onclick="api('disarm')">Disarm</button>
   <button onclick="if(confirm('Recalibrate? The pedal will move to both ends. Keep your foot off.'))api('calibrate')">Calibrate</button>
@@ -60,67 +94,91 @@ canvas{width:100%;display:block;background:var(--panel2);border:1px solid var(--
   <select id="profiles" title="Profiles"></select>
   <button onclick="loadProfile()">Load</button>
   <button onclick="saveProfile(false)">Save</button>
-  <button onclick="saveProfile(true)">Save as…</button>
+  <button onclick="saveProfile(true)">Save as</button>
   <button onclick="delProfile()">Delete</button>
   <button id="rec" onclick="toggleRec()">● Record</button>
 </header>
 
-<main>
-  <section>
-    <div class="card">
-      <h2>Live</h2>
-      <div class="tiles">
-        <div class="tile"><div class="k">Brake</div><div class="v" id="t_kg">–<small>kg</small></div><div class="bar"><i id="b_kg" style="background:var(--brake)"></i></div></div>
-        <div class="tile"><div class="k">Position</div><div class="v" id="t_mm">–<small>mm</small></div><div class="bar"><i id="b_mm" style="background:var(--pos)"></i></div></div>
-        <div class="tile"><div class="k">Throttle</div><div class="v" id="t_thr">–<small>%</small></div><div class="bar"><i id="b_thr" style="background:var(--thr)"></i></div></div>
-        <div class="tile"><div class="k">Motor</div><div class="v" id="t_a">–<small>A</small></div><div class="bar"><i id="b_a" style="background:var(--abs)"></i></div></div>
-        <div class="tile"><div class="k">Peak brake</div><div class="v" id="t_peak">–<small>kg</small></div></div>
-        <div class="tile" id="heatTile" style="display:none"><div class="k">Brake heat</div><div class="v" id="t_heat">–<small>% fade</small></div><div class="bar"><i id="b_heat" style="background:var(--heat)"></i></div></div>
-      </div>
-      <canvas id="chart" height="260"></canvas>
-      <div class="legend">
-        <span><b style="background:var(--brake)"></b>brake kg (0–25)</span>
-        <span><b style="background:var(--pos)"></b>position mm (0–50)</span>
-        <span><b style="background:var(--thr)"></b>throttle %</span>
-        <span><b style="background:var(--abs);opacity:.5;height:8px"></b>ABS active</span>
-      </div>
-    </div>
+<div class="app">
+  <div class="main">
+    <nav class="tabs" id="tabs">
+      <button data-tab="live">Live</button>
+      <button data-tab="curve">Pedal curve</button>
+      <button data-tab="encoder">Encoder health</button>
+      <button data-tab="console">Console</button>
+      <button data-tab="settings" class="narrow">Settings</button>
+    </nav>
+    <div class="panes">
+      <section class="pane" id="pane-live">
+        <div class="tiles">
+          <div class="tile"><div class="k">Brake</div><div class="v" id="t_kg">–<small>kg</small></div><div class="bar"><i id="b_kg" style="background:var(--brake)"></i></div></div>
+          <div class="tile"><div class="k">Position</div><div class="v" id="t_mm">–<small>mm</small></div><div class="bar"><i id="b_mm" style="background:var(--pos)"></i></div></div>
+          <div class="tile"><div class="k">Throttle</div><div class="v" id="t_thr">–<small>%</small></div><div class="bar"><i id="b_thr" style="background:var(--thr)"></i></div></div>
+          <div class="tile"><div class="k">Motor</div><div class="v" id="t_a">–<small>A</small></div><div class="bar"><i id="b_a" style="background:var(--abs)"></i></div></div>
+          <div class="tile"><div class="k">Peak brake</div><div class="v" id="t_peak">–<small>kg</small></div></div>
+          <div class="tile" id="heatTile" style="display:none"><div class="k">Brake heat</div><div class="v" id="t_heat">–<small>% fade</small></div><div class="bar"><i id="b_heat" style="background:var(--heat)"></i></div></div>
+        </div>
+        <div class="cw"><canvas id="chart"></canvas></div>
+        <div class="legend">
+          <span><b style="background:var(--brake)"></b>brake kg (left, 0–25)</span>
+          <span><b style="background:var(--pos)"></b>position mm (right, 0–50)</span>
+          <span><b style="background:var(--thr)"></b>throttle %</span>
+          <span><b style="background:var(--abs);opacity:.5;height:8px"></b>ABS active</span>
+        </div>
+      </section>
 
-    <div class="card" style="margin-top:14px">
-      <h2>Pedal curve — force vs travel</h2>
-      <canvas id="curve" height="250"></canvas>
-      <div class="legend">
-        <span><b style="background:var(--pos)"></b>profile curve</span>
-        <span><b style="background:var(--heat)"></b>with effects now</span>
-        <span><b style="background:var(--abs)"></b>ABS start / full</span>
-        <span><b style="background:var(--brake);height:8px;width:8px;border-radius:50%"></b>your foot</span>
-      </div>
-    </div>
+      <section class="pane" id="pane-curve">
+        <div class="cw"><canvas id="curve"></canvas></div>
+        <div class="legend">
+          <span><b style="background:var(--pos)"></b>profile curve</span>
+          <span><b style="background:var(--heat)"></b>with effects now</span>
+          <span><b style="background:var(--abs)"></b>ABS start / full</span>
+          <span><b style="background:var(--brake);height:8px;width:8px;border-radius:50%"></b>your foot</span>
+        </div>
+      </section>
 
-    <div class="card" style="margin-top:14px">
-      <h2>Encoder health <button style="float:right;padding:2px 8px;font-size:11px" onclick="api('stats/reset')">reset</button></h2>
-      <div class="tiles" style="margin:0">
-        <div class="tile enc" id="e1"><div class="k">Big corrections</div><div class="v" id="t_zbig">–</div></div>
-        <div class="tile enc" id="e2"><div class="k">Largest (limit 256)</div><div class="v" id="t_zmax">–</div></div>
-        <div class="tile enc" id="e3"><div class="k">Bad index checks</div><div class="v" id="t_idx">–</div></div>
-        <div class="tile enc"><div class="k">Uno resets</div><div class="v" id="t_resets">–</div></div>
-      </div>
-    </div>
+      <section class="pane" id="pane-encoder">
+        <div class="tiles">
+          <div class="tile enc" id="e1"><div class="k">Big corrections</div><div class="v" id="t_zbig">–</div></div>
+          <div class="tile enc" id="e2"><div class="k">Largest (limit 256)</div><div class="v" id="t_zmax">–</div></div>
+          <div class="tile enc" id="e3"><div class="k">Bad index checks</div><div class="v" id="t_idx">–</div></div>
+          <div class="tile enc"><div class="k">Uno resets</div><div class="v" id="t_resets">–</div></div>
+        </div>
+        <p class="note">Every encoder revolution the index (Z) pulse checks the count. A correction over 24 counts is a "big" one; over 256 the
+          position is treated as lost. Rising numbers mean noise on the encoder cable (route it away from the motor leads, use shielded cable)
+          or counts missed at high speed.</p>
+        <div class="row"><button onclick="api('stats/reset')">Reset counters</button></div>
+      </section>
 
-    <div class="card" style="margin-top:14px">
-      <h2>Console</h2>
-      <div id="log"></div>
-      <div class="row"><input type="text" id="cmd" placeholder="raw command, e.g. ?  (Enter to send)"><button onclick="sendCmd()">Send</button><button onclick="api('push')" title="Send every setting again">Push all</button></div>
+      <section class="pane" id="pane-console">
+        <div id="log"></div>
+        <div class="row"><input type="text" id="cmd" placeholder="raw command, e.g. ?  (Enter to send)"><button onclick="sendCmd()">Send</button><button onclick="api('push')" title="Send every setting again">Push all</button></div>
+      </section>
     </div>
-  </section>
+  </div>
 
-  <section class="card" id="knobs"><h2>Settings <span id="dirty" style="color:var(--warn);text-transform:none;letter-spacing:0"></span></h2></section>
-</main>
+  <aside id="knobs"><div class="head"><h2>Settings</h2><span id="dirty" style="color:var(--warn);font-size:12px"></span></div></aside>
+</div>
 
 <script>
 const $ = id => document.getElementById(id);
-let CFG = null, P = {}, saved = {}, LIVE = {}, hist = [], lastAbsT = 0;
+let CFG = null, P = {}, saved = {}, LIVE = {}, hist = [];
 const HIST_S = 10;
+
+// ---------------- tabs
+let TAB = 'live';
+try { TAB = localStorage.getItem('pedal.tab') || 'live'; } catch (e) {}
+function showTab(t){
+  if (t === 'settings' && matchMedia('(min-width:901px)').matches) t = 'live';
+  TAB = t;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + t));
+  document.body.classList.toggle('tab-settings', t === 'settings');
+  try { localStorage.setItem('pedal.tab', t); } catch (e) {}
+  if (t === 'console') { const l=$('log'); l.scrollTop = l.scrollHeight; }
+  drawChart(); drawCurve();
+}
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 
 async function api(path, body) {
   const r = await fetch('/api/' + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})});
@@ -133,7 +191,7 @@ async function init() {
   P = CFG.profile; saved = {...P};
   fillProfiles(CFG.profiles, CFG.profile_name);
   buildKnobs();
-  drawCurve();
+  showTab(TAB);
   stream();
 }
 function fillProfiles(list, cur){ const s=$('profiles'); s.innerHTML=''; for (const n of list){ const o=document.createElement('option'); o.textContent=n; if(n===cur)o.selected=true; s.appendChild(o);} }
@@ -180,7 +238,7 @@ function queue(key){ clearTimeout(sendTimers[key]); sendTimers[key] = setTimeout
 async function push(key){ const j = await api('knob', {key, value:P[key]}); if (j.value!==undefined && j.value!==P[key]) { P[key]=j.value; $('k_'+key).paint(); } drawCurve(); markDirty(); }
 function markDirty(){
   let n=0; for (const k of CFG.knobs){ const ch = +P[k.key] !== +saved[k.key]; $('k_'+k.key)?.classList.toggle('changed', ch); n+=ch; }
-  $('dirty').textContent = n ? `· ${n} unsaved` : '';
+  $('dirty').textContent = n ? `${n} unsaved` : '';
 }
 
 // ---------------- profiles
@@ -222,38 +280,44 @@ function stream(){
     $('t_zbig').textContent = st.zbig; $('t_zmax').textContent = st.zmax; $('t_resets').textContent = st.resets;
     $('e1').className='tile enc'+(st.zbig>50?' warn':''); $('e2').className='tile enc'+(st.zmax>200?' bad':st.zmax>120?' warn':'');
     const L = s.live; if (!L || L.kg===undefined) return;
-    if (L.t !== LIVE.t) { hist.push(L); }
+    if (L.t !== LIVE.t) hist.push(L);
     LIVE = L;
     const now = L.t; while (hist.length && hist[0].t < now-HIST_S) hist.shift();
     const m=$('mode'); m.textContent=L.mode; m.className='pill'+(L.mode.startsWith('ABS')?' abs':L.mode!=='disarmed'&&!L.mode.startsWith('cal')?' armed':'');
+    $('r_kg').textContent=L.kg.toFixed(1); $('r_mm').textContent=L.mm.toFixed(1); $('r_thr').textContent=L.thr.toFixed(0);
     setTile('kg', L.kg, 1, 25); setTile('mm', L.mm, 1, 50); setTile('thr', L.thr, 0, 100); setTile('a', L.mA/1000, 1, 15);
     $('t_idx').textContent = L.idx_n ? `${L.idx_bad} / ${L.idx_n}` : '–';
     $('e3').className='tile enc'+(L.idx_n && L.idx_bad/L.idx_n>0.4?' warn':'');
     const hot = !!P['fx.hot']; $('heatTile').style.display = hot?'':'none';
     if (hot) { $('t_heat').innerHTML=Math.round(L.fade*100)+'<small>% fade</small>'; $('b_heat').style.width = Math.min(100, L.heat/P['fx.heat_full']*100)+'%'; }
-    drawChart(); drawCurve();
+    if (TAB==='live') drawChart(); else if (TAB==='curve') drawCurve();
   };
   es.onerror = () => { $('conn').textContent='pi offline'; $('conn').className='pill bad'; };
 }
 function setTile(id, v, dp, full){ $('t_'+id).firstChild.nodeValue = v.toFixed(dp); $('b_'+id).style.width = Math.max(0,Math.min(100, v/full*100))+'%'; }
 
-// ---------------- charts
-function fitCanvas(cv){ const r=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight; if(cv.width!==Math.round(w*r)||cv.height!==Math.round(h*r)){cv.width=Math.round(w*r);cv.height=Math.round(h*r);} const g=cv.getContext('2d'); g.setTransform(r,0,0,r,0,0); return [g,w,h]; }
+// ---------------- charts (drawn only while their tab is visible)
+function fitCanvas(cv){
+  const w=cv.clientWidth, h=cv.clientHeight; if (!w || !h) return null;
+  const r=window.devicePixelRatio||1;
+  if(cv.width!==Math.round(w*r)||cv.height!==Math.round(h*r)){cv.width=Math.round(w*r);cv.height=Math.round(h*r);}
+  const g=cv.getContext('2d'); g.setTransform(r,0,0,r,0,0); return [g,w,h];
+}
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function grid(g, w, h, pad){ g.strokeStyle=css('--line'); g.lineWidth=1; g.beginPath(); for(let i=0;i<=5;i++){const y=pad.t+(h-pad.t-pad.b)*i/5; g.moveTo(pad.l,y); g.lineTo(w-pad.r,y);} g.stroke(); }
 
 function drawChart(){
-  const [g,w,h] = fitCanvas($('chart')); g.clearRect(0,0,w,h);
+  const f = fitCanvas($('chart')); if (!f) return; const [g,w,h] = f; g.clearRect(0,0,w,h);
   const pad={l:34,r:34,t:8,b:18}; grid(g,w,h,pad);
+  g.fillStyle=css('--dim'); g.font='11px system-ui';
+  for(let i=0;i<=5;i++){const y=pad.t+(h-pad.t-pad.b)*i/5; g.textAlign='right'; g.fillText((25-5*i)+'', pad.l-5, y+4); g.textAlign='left'; g.fillText((50-10*i)+'', w-pad.r+5, y+4);}
+  g.textAlign='center'; g.fillText('−'+HIST_S+' s', pad.l+14, h-4); g.fillText('now', w-pad.r-12, h-4);
   if (!hist.length) return;
   const t1 = hist[hist.length-1].t, X = t => pad.l + (w-pad.l-pad.r)*(1-(t1-t)/HIST_S), Y = (v,max) => h-pad.b-(h-pad.t-pad.b)*Math.max(0,Math.min(1,v/max));
   g.fillStyle = css('--abs')+'40';
   for (let i=1;i<hist.length;i++) if (hist[i].mode.startsWith('ABS')) g.fillRect(X(hist[i-1].t), pad.t, X(hist[i].t)-X(hist[i-1].t)+0.5, h-pad.t-pad.b);
   const line=(key,max,col,width)=>{ g.strokeStyle=col; g.lineWidth=width; g.beginPath(); hist.forEach((p,i)=>{const x=X(p.t),y=Y(p[key],max); i?g.lineTo(x,y):g.moveTo(x,y);}); g.stroke(); };
   line('thr',100,css('--thr'),1.5); line('mm',50,css('--pos'),2); line('kg',25,css('--brake'),2.2);
-  g.fillStyle=css('--dim'); g.font='11px system-ui';
-  for(let i=0;i<=5;i++){const y=pad.t+(h-pad.t-pad.b)*i/5; g.textAlign='right'; g.fillText((25-5*i)+'', pad.l-5, y+4); g.textAlign='left'; g.fillText((50-10*i)+'', w-pad.r+5, y+4);}
-  g.textAlign='center'; g.fillText('−'+HIST_S+' s', pad.l+14, h-4); g.fillText('now', w-pad.r-12, h-4);
 }
 
 // firmware curvePos(), in mm (PARK 2 mm, top = travel limit)
@@ -274,7 +338,7 @@ function curveMM(kg, o){
 }
 function drawCurve(){
   if (!CFG) return;
-  const [g,w,h] = fitCanvas($('curve')); g.clearRect(0,0,w,h);
+  const f = fitCanvas($('curve')); if (!f) return; const [g,w,h] = f; g.clearRect(0,0,w,h);
   const pad={l:34,r:12,t:8,b:22}; grid(g,w,h,pad);
   const kmax = Math.max(10, Math.ceil(Math.max(P.p, P.f, LIVE.kg||0)*1.1/5)*5), mmax=50;
   const X=kg=>pad.l+(w-pad.l-pad.r)*kg/kmax, Y=mm=>h-pad.b-(h-pad.t-pad.b)*mm/mmax;
@@ -290,7 +354,7 @@ function drawCurve(){
   g.textAlign='right'; for(let i=0;i<=5;i++) g.fillText((mmax-10*i)+'', pad.l-5, pad.t+(h-pad.t-pad.b)*i/5+4);
   g.textAlign='center'; for(let kg=0;kg<=kmax;kg+=5) g.fillText(kg+(kg===kmax?' kg':''), X(kg), h-6);
 }
-addEventListener('resize', ()=>{drawChart(); drawCurve();});
+addEventListener('resize', ()=>{ if (TAB==='settings' && matchMedia('(min-width:901px)').matches) showTab('live'); drawChart(); drawCurve(); });
 init();
 </script>
 </body>
