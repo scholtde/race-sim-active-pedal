@@ -1,0 +1,2 @@
+# /etc/udev/rules.d/99-pedal-hidg.rules: let pedald (plugdev) write the game controller
+KERNEL=="hidg[0-9]*", GROUP="plugdev", MODE="0660"

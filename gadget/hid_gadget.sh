@@ -42,7 +42,6 @@ echo 100 > configs/c.1/MaxPower
 ln -s functions/hid.usb0 configs/c.1/
 
 ls /sys/class/udc | head -1 > UDC
-# udev creates the node a moment later; pedald runs as a normal user
-for i in 1 2 3 4 5 6 7 8 9 10; do [ -e /dev/hidg0 ] && break; sleep 0.2; done
-chmod 666 /dev/hidg0
+# permissions come from gadget/99-pedal-hidg.rules (udev would undo a chmod here)
+udevadm settle -t 5 || true
 echo "gadget up on $(cat UDC)"
