@@ -7,7 +7,7 @@ GUI on http://<pi>:8080.  Standard library + pyserial only (must run on a Pi Zer
 
     python3 pedald.py [--port /dev/ttyACM0] [--http 8080]
 """
-import argparse, json, os, queue, re, signal, sys, threading, time
+import argparse, json, os, queue, re, signal, struct, sys, threading, time
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import serial
 
@@ -52,6 +52,11 @@ KNOBS = [
   ("fx.lock_kg",   "Effects", "Lock-up above",         3,    40,   0.5,  14,     "kg",   None),
   ("fx.soft",      "Effects", "Full fade softens by",  0,    0.9,  0.05, 0.5,    "",     None),
   ("fx.long_mm",   "Effects", "Full fade lengthens by", 0,   20,   0.5,  10,     "mm",   None),
+  # game controller (USB HID gadget, /dev/hidg0): Pi side
+  ("hid.brake_kg",    "Game", "Brake 100% at",         2,    60,   0.5,  20,     "kg",   None),
+  ("hid.brake_dz",    "Game", "Brake deadzone",        0,    5,    0.05, 0.5,    "kg",   None),
+  ("hid.brake_gamma", "Game", "Brake curve",           0.3,  3,    0.05, 1.0,    "",     None),
+  ("hid.thr_max",     "Game", "Throttle 100% at",      50,   100,  0.5,  98,     "%",    None),
 ]
 KN = {k[0]: dict(zip(("key","group","label","min","max","step","default","unit","cmd"), k)) for k in KNOBS}
 DEFAULT_PROFILE = {k: v["default"] for k, v in KN.items()}
@@ -77,6 +82,33 @@ def firmware_cmds(prof, p_live=None, b_mm_live=None):
     return out
 
 # ---------------------------------------------------------------------------
+class Hid:
+    """USB HID game controller gadget (gadget/hid_gadget.sh makes /dev/hidg0).
+    Report: buttons u8, X = brake u16, Y = throttle u16, both 0..4095.
+    Non-blocking: if the PC is not reading, reports are dropped, never queued."""
+    PATH = "/dev/hidg0"
+    def __init__(self):
+        self.fd = None; self.next_open = 0.0; self.status = "absent"; self.ok_t = 0.0
+        self.last = None
+    def send(self, brake, thr, force=False):
+        """brake, thr in 0..1"""
+        rep = struct.pack("<BHH", 0, int(round(max(0.0, min(1.0, brake)) * 4095)),
+                          int(round(max(0.0, min(1.0, thr)) * 4095)))
+        if self.fd is None:
+            if time.time() < self.next_open: return
+            try: self.fd = os.open(self.PATH, os.O_WRONLY | os.O_NONBLOCK)
+            except OSError:
+                self.status = "absent"; self.next_open = time.time() + 2; return
+        try:
+            os.write(self.fd, rep); self.ok_t = time.time(); self.status = "ok"; self.last = rep
+        except BlockingIOError:
+            if time.time() - self.ok_t > 1: self.status = "no PC"
+        except OSError:                      # gadget torn down / unbound
+            try: os.close(self.fd)
+            except OSError: pass
+            self.fd = None; self.status = "absent"; self.next_open = time.time() + 2
+
+
 class Pedal:
     """Serial owner + live state + effects."""
     def __init__(self, port):
@@ -98,6 +130,7 @@ class Pedal:
         self.p_sent = None; self.b_sent = None
         self.abs_t = None; self.abs_floor = None; self.rel_t = None; self.rel_from = None
         self.heat = 0.0; self.last_t = None; self.fade = 0.0
+        self.hid = Hid()
 
     # ---- persistence -------------------------------------------------------
     def _load_state(self):
@@ -193,6 +226,7 @@ class Pedal:
     def _set_conn(self, c):
         if c != self.connected:
             self.connected = c
+            if not c: self.hid.send(0, 0)    # never leave the game holding the brake
             self._note("Uno connected" if c else "Uno disconnected")
             self._bump()
 
@@ -229,6 +263,7 @@ class Pedal:
             try: self.stats["zmax"] = max(self.stats["zmax"], int(d["z"].split("/")[1]))
             except Exception: pass
             self._effects(d)
+            self._game(d)
             with self.cond:
                 self.live = d; self.seq += 1; self.cond.notify_all()
             return
@@ -248,6 +283,17 @@ class Pedal:
         if ln.startswith("ZBIG"):
             return
         self._note(ln)
+
+    # ---- game controller ---------------------------------------------------
+    def _game(self, d):
+        P = self.profile
+        dz = P["hid.brake_dz"]
+        b = max(0.0, d["kg"] - dz) / max(0.1, P["hid.brake_kg"] - dz)
+        b = min(1.0, b) ** P["hid.brake_gamma"]
+        t = min(1.0, d["thr"] / P["hid.thr_max"])
+        if d["mode"].startswith("cal"): b = 0.0   # calibration pushes the pedal, not the driver
+        self.hid.send(b, t)
+        d["g_brk"] = round(b * 100, 1); d["g_thr"] = round(t * 100, 1)
 
     # ---- effects (Pi side) -------------------------------------------------
     def _fx_on(self):
@@ -313,7 +359,7 @@ class Pedal:
     def snapshot(self, since_log=0):
         return {"seq": self.seq, "connected": self.connected, "live": self.live,
                 "log": [l for l in self.log if l[0] > since_log],
-                "stats": self.stats, "recording": bool(self.rec),
+                "stats": self.stats, "recording": bool(self.rec), "hid": self.hid.status,
                 "profile_name": self.state.get("profile")}
 
 

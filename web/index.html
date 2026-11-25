@@ -90,6 +90,7 @@ aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.9px;color:var(-
   <h1>Active Pedal</h1>
   <span id="conn" class="pill bad">offline</span>
   <span id="mode" class="pill">—</span>
+  <span id="hid" class="pill bad" title="USB game controller">game —</span>
   <span class="readout">BRK <b id="r_kg">–</b> kg · <b id="r_mm">–</b> mm · THR <b id="r_thr">–</b> %</span>
   <button class="primary" onclick="armClick()">Arm</button>
   <button class="danger" onclick="api('disarm')">Disarm</button>
@@ -274,6 +275,10 @@ const HELP = {
   'fx.lock_kg': `Above this force the wheels count as locked, so no more heat goes in (a locked wheel stops heating the disc).
     Lower = lock-up is easier to reach.`,
   'fx.soft': `How much softer the pedal is at full fade. 0.5 = half as stiff; 0 = no softening, only a longer pedal.`,
+  'hid.brake_kg': `Foot force that reads as 100% brake in the game. Set it near the force you actually reach in a hard stop: too high and the game never sees full brake; too low and the top of your pedal stroke is wasted at 100%. Your full-travel force (p) is a good start.`,
+  'hid.brake_dz': `Force ignored before the game brake starts to rise, so a resting foot or load-cell noise does not drag the brakes. 0.3–1 kg is typical.`,
+  'hid.brake_gamma': `Shape of force → game brake. 1 = linear. Above 1 gives fine control at light pressure (more force needed for the first half); below 1 makes light pressure count for more. Most sims also have their own brake curve; change only one of the two.`,
+  'hid.thr_max': `Throttle % (from the pot) that reads as full throttle in the game. Lower it if flat-out does not quite reach 100% in the game.`,
   'fx.long_mm': `How much deeper the bite point moves at full fade — the "long pedal". 10 mm is clearly noticeable; 0 = only softer.`,
 };
 
@@ -362,6 +367,7 @@ function stream(){
     if (s.log.length) addLog(s.log);
     const c=$('conn'); c.textContent = s.connected?'Uno connected':'Uno offline'; c.className='pill '+(s.connected?'ok':'bad');
     recOn = s.recording; $('rec').classList.toggle('on', recOn); $('rec').textContent = recOn?'■ Recording':'● Record';
+    const h=$('hid'), hs=s.hid||'absent'; h.textContent = hs==='ok'?'game ok':hs==='no PC'?'game: no PC':'game: no gadget'; h.className='pill '+(hs==='ok'?'ok':'bad');
     const st=s.stats;
     $('t_peak').innerHTML = st.peak_kg.toFixed(1)+'<small>kg</small>';
     $('t_zbig').textContent = st.zbig; $('t_zmax').textContent = st.zmax; $('t_resets').textContent = st.resets;

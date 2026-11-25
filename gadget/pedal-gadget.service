@@ -1,0 +1,19 @@
+# Boot-time USB game controller: flip the UP board OTG port to device mode,
+# then create the HID gadget. pedald writes to /dev/hidg0.
+# Install:
+#   sudo cp gadget/pedal-gadget.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now pedal-gadget
+# On a board whose OTG port is already a device (Pi Zero/4/5) drop the otg_role line.
+[Unit]
+Description=Active pedal USB game controller gadget
+Before=pedald.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/python3 /home/simpedal/projects/race-sim-active-pedal/gadget/otg_role.py device
+ExecStart=/bin/sh /home/simpedal/projects/race-sim-active-pedal/gadget/hid_gadget.sh
+ExecStop=/bin/sh /home/simpedal/projects/race-sim-active-pedal/gadget/hid_gadget.sh down
+
+[Install]
+WantedBy=multi-user.target
